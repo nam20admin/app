@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        html, body { width: 100vw; height: 100vh; overflow: hidden; background-color: #f0f2f5; }
+        
+        /* Màn hình đăng nhập/đăng ký */
+        .auth-wrapper { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+        .auth-container { width: 380px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center; }
+        .auth-container h2 { color: #0068ff; margin-bottom: 20px; }
+        .auth-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; outline: none; }
+        .auth-btn { width: 100%; padding: 12px; background: #0068ff; color: white; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .auth-btn:hover { background: #0052cc; }
+        .switch-auth { margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; }
+        .switch-auth span { color: #0068ff; font-weight: bold; }
+        .error-msg { color: #ff4d4f; font-size: 13px; margin-top: 5px; display: none; text-align: left; }
+
+        /* Giao diện chính tràn toàn màn hình */
+        .zalo-container { display: none; width: 100vw; height: 100vh; background: white; overflow: hidden; }
+        .sidebar { width: 340px; background: #f7f9fc; border-right: 1px solid #e1e4e8; display: flex; flex-direction: column; height: 100%; }
+        .sidebar-header { padding: 15px; background: #0068ff; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .search-box { padding: 10px; border-bottom: 1px solid #e1e4e8; display: flex; gap: 5px; background: #fff; }
+        .search-box input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
+        .search-box button { padding: 8px 12px; background: #0068ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item { padding: 12px 15px; display: flex; align-items: center; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .chat-item:hover { background: #eef2f7; }
+        .avatar { width: 42px; height: 42px; background: #0068ff; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
+
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #fff; height: 100%; }
+        .chat-header { padding: 15px 20px; border-bottom: 1px solid #e1e4e8; display: flex; justify-content: space-between; align-items: center; background: #fdfdfd; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #efeae2; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 60%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+        .message.incoming { background: white; align-self: flex-start; }
+        .message.outgoing { background: #cfe3ff; align-self: flex-end; }
+        
+        .chat-input-box { padding: 15px 20px; border-top: 1px solid #e1e4e8; display: flex; gap: 10px; background: #fff; }
+        .chat-input-box input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 4px; outline: none; font-size: 14px; }
+        .chat-input-box button { padding: 12px 24px; background: #0068ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        /* Modal gọi điện */
+        .call-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .call-modal video { width: 640px; height: 480px; background: #222; border-radius: 8px; margin-bottom: 20px; max-width: 90%; max-height: 70%; object-fit: cover; }
+        .end-call-btn { padding: 12px 30px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- PHẦN ĐĂNG NHẬP / ĐĂNG KÝ -->
+    <div class="auth-wrapper" id="authBox">
+        <div class="auth-container">
+            <h2 id="authTitle">Đăng nhập hello</h2>
+            <input type="text" id="username" class="auth-input" placeholder="Số điện thoại hoặc tên tài khoản">
+            <input type="password" id="password" class="auth-input" placeholder="Mật khẩu">
+            <div class="error-msg" id="errorMsg">Tài khoản này không tồn tại!</div>
+            <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">Đăng nhập</button>
+            <div class="switch-auth" onclick="toggleAuthMode()"><span id="switchHint">Chưa có tài khoản?</span> <span id="switchText" style="color: #0068ff; font-weight: bold;">Đăng ký ngay</span></div>
+        </div>
+    </div>
+
+    <!-- GIAO DIỆN CHÍNH TRÀN MÀN HÌNH -->
+    <div class="zalo-container" id="mainApp">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3 id="currentUserName">hello Chat</h3>
+                <button onclick="logout()" style="background:none; border:none; color:white; cursor:pointer; font-size: 13px;">Đăng xuất</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchPhone" placeholder="Nhập tên/SĐT để kết bạn...">
+                <button onclick="addFriend()">Kết bạn</button>
+            </div>
+            <div class="chat-list" id="chatList">
+                <!-- Danh sách bạn bè -->
+            </div>
+        </div>
+        <div class="chat-area" id="chatArea" style="display:none;">
+            <div class="chat-header">
+                <h4 id="activeChatName">Chọn một cuộc trò chuyện</h4>
+                <div>
+                    <button onclick="startCall(false)" style="padding: 8px 14px; margin-right: 5px; cursor:pointer; border: 1px solid #ddd; background: white; border-radius: 4px;">📞 Gọi thoại</button>
+                    <button onclick="startCall(true)" style="padding: 8px 14px; cursor:pointer; border: none; background: #0068ff; color: white; border-radius: 4px;">📹 Gọi Video</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-box">
+                <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Gửi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH GỌI ĐIỆN -->
+    <div class="call-modal" id="callModal">
+        <h3 id="callStatus" style="margin-bottom: 15px;">Đang kết nối camera...</h3>
+        <video id="webcam" autoplay playsinline></video>
+        <button class="end-call-btn" onclick="endCall()">Kết thúc cuộc gọi</button>
+    </div>
+
+    <script>
+        let isLoginMode = true;
+        
+        let accounts = JSON.parse(localStorage.getItem('hello_saved_accounts')) || { "admin": "123456" };
+        let friends = JSON.parse(localStorage.getItem('hello_saved_friends')) || {};
+        let messagesData = JSON.parse(localStorage.getItem('hello_saved_msgs')) || {};
+        
+        let currentUser = null;
+        let activeFriend = null;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            let titleEl = document.getElementById('authTitle');
+            let btnEl = document.getElementById('authSubmitBtn');
+            let hintEl = document.getElementById('switchHint');
+            let textEl = document.getElementById('switchText');
+            let errBox = document.getElementById('errorMsg');
+
+            errBox.style.display = 'none';
+            if (isLoginMode) {
+                titleEl.innerText = "Đăng nhập hello";
+                btnEl.innerText = "Đăng nhập";
+                hintEl.innerText = "Chưa có tài khoản?";
+                textEl.innerText = "Đăng ký ngay";
+            } else {
+                titleEl.innerText = "Đăng ký tài khoản hello";
+                btnEl.innerText = "Đăng ký";
+                hintEl.innerText = "Đã có tài khoản?";
+                textEl.innerText = "Đăng nhập ngay";
+            }
+        }
+
+        function handleAuth() {
+            let user = document.getElementById('username').value.trim();
+            let pass = document.getElementById('password').value.trim();
+            let errBox = document.getElementById('errorMsg');
+
+            if (!user || !pass) {
+                alert("Vui lòng nhập đầy đủ thông tin!");
+                return;
+            }
+
+            if (isLoginMode) {
+                // Xử lý Đăng nhập
+                if (accounts[user] && accounts[user] === pass) {
+                    currentUser = user;
+                    enterApp();
+                } else {
+                    errBox.innerText = "Tài khoản này không tồn tại hoặc sai mật khẩu!";
+                    errBox.style.display = 'block';
+                }
+            } else {
+                // Xử lý Đăng ký
+                if (accounts[user]) {
+                    alert("Tài khoản này đã tồn tại!");
+                } else {
+                    accounts[user] = pass;
+                    localStorage.setItem('hello_saved_accounts', JSON.stringify(accounts));
+                    alert("Đăng ký thành công! Hãy chuyển sang đăng nhập.");
+                    toggleAuthMode();
+                }
+            }
+        }
+
+        function enterApp() {
+            document.getElementById('authBox').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            document.getElementById('currentUserName').innerText = "TK: " + currentUser;
+            loadFriends();
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('authBox').style.display = 'flex';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function addFriend() {
+            let target = document.getElementById('searchPhone').value.trim();
+            if (!target) return;
+
+            if (target === currentUser) {
+                alert("Không thể kết bạn với chính mình!");
+                return;
+            }
+
+            if (accounts[target]) {
+                if (!friends[currentUser]) friends[currentUser] = [];
+                if (!friends[currentUser].includes(target)) {
+                    friends[currentUser].push(target);
+                    localStorage.setItem('hello_saved_friends', JSON.stringify(friends));
+                    loadFriends();
+                    alert("Kết bạn thành công!");
+                } else {
+                    alert("Đã là bạn bè từ trước!");
+                }
+            } else {
+                alert("Không tìm thấy tài khoản này!");
+            }
+            document.getElementById('searchPhone').value = '';
+        }
+
+        function loadFriends() {
+            let listEl = document.getElementById('chatList');
+            listEl.innerHTML = '';
+            let userFriends = (friends[currentUser] || []);
+            
+            userFriends.forEach(f => {
+                let div = document.createElement('div');
+                div.className = 'chat-item';
+                div.innerHTML = `<div class="avatar">${f[0].toUpperCase()}</div><div><strong>${f}</strong></div>`;
+                div.onclick = () => openChat(f);
+                listEl.appendChild(div);
+            });
+        }
+
+        function openChat(friendName) {
+            activeFriend = friendName;
+            document.getElementById('chatArea').style.display = 'flex';
+            document.getElementById('activeChatName').innerText = "Đang chat với: " + friendName;
+            loadMessages();
+        }
+
+        function loadMessages() {
+            let msgContainer = document.getElementById('chatMessages');
+            msgContainer.innerHTML = '';
+            let key = [currentUser, activeFriend].sort().join('_');
+            let msgs = messagesData[key] || [];
+
+            msgs.forEach(m => {
+                let div = document.createElement('div');
+                div.className = `message ${m.sender === currentUser ? 'outgoing' : 'incoming'}`;
+                div.innerText = m.text;
+                msgContainer.appendChild(div);
+            });
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+
+        function sendMessage() {
+            let input = document.getElementById('messageInput');
+            let text = input.value.trim();
+            if (!text || !activeFriend) return;
+
+            let key = [currentUser, activeFriend].sort().join('_');
+            if (!messagesData[key]) messagesData[key] = [];
+
+            messagesData[key].push({ sender: currentUser, text: text });
+            localStorage.setItem('hello_saved_msgs', JSON.stringify(messagesData));
+            input.value = '';
+            loadMessages();
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        let mediaStream = null;
+        async function startCall(isVideo) {
+            document.getElementById('callModal').style.display = 'flex';
+            document.getElementById('callStatus').innerText = isVideo ? "Đang kết nối cuộc gọi Video..." : "Đang kết nối cuộc gọi thoại...";
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+                document.getElementById('webcam').srcObject = mediaStream;
+            } catch (err) {
+                alert("Không thể bật Camera/Microphone.");
+            }
+        }
+
+        function endCall() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('callModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
